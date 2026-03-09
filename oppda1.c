@@ -18,92 +18,16 @@ typedef struct {
 } Student;
 
 Student students[MAX_STUDENTS];
-int     studentCount = 0;
+int studentCount = 0;
 
-// ─────────────────────────────────────────────
-//  SAVE/LOAD via localStorage (WASM) or file (native)
-// ─────────────────────────────────────────────
-void saveToFile() {
-#ifdef __EMSCRIPTEN__
-    // Build a CSV string and store in localStorage
-    char buf[1024 * 100];
-    int  pos = 0;
-    pos += sprintf(buf + pos, "%d\n", studentCount);
-    for (int i = 0; i < studentCount; i++) {
-        Student *s = &students[i];
-        pos += sprintf(buf + pos, "%s|%s|%.1f|%.1f|%.1f\n",
-                       s->regNo, s->name,
-                       s->marks[0], s->marks[1], s->marks[2]);
-    }
-    // Pass string to JS localStorage
-    EM_ASM({ localStorage.setItem('spa_data', UTF8ToString($0)); }, buf);
-    printf("\n[+] %d record(s) saved.\n", studentCount);
-#else
-    FILE *fp = fopen("students.dat", "wb");
-    if (!fp) { printf("\n[!] Could not save file.\n"); return; }
-    fwrite(&studentCount, sizeof(int),     1,            fp);
-    fwrite(students,      sizeof(Student), studentCount, fp);
-    fclose(fp);
-    printf("\n[+] %d record(s) saved.\n", studentCount);
-#endif
-}
+// ── State machine for menu interaction ───────────────────────
+// state: 0=menu, 1=add(regNo), 2=add(name), 3=add(m1), 4=add(m2), 5=add(m3)
+//        6=search, 7=update(regNo), 8=update(m1), 9=update(m2), 10=update(m3)
+int state = 0;
+Student tempStudent;   // holds student being entered
+int updateIdx = -1;    // index of student being updated
 
-void loadFromFile() {
-#ifdef __EMSCRIPTEN__
-    // Read CSV string back from localStorage
-    char *data = (char *)EM_ASM_PTR({
-        var s = localStorage.getItem('spa_data');
-        if (!s) return 0;
-        var len  = lengthBytesUTF8(s) + 1;
-        var heap = _malloc(len);
-        stringToUTF8(s, heap, len);
-        return heap;
-    });
-    if (!data) {
-        printf("\n[i] No saved data. Starting fresh.\n");
-        return;
-    }
-    // Parse CSV
-    char *line = strtok(data, "\n");
-    if (!line) { free(data); return; }
-    studentCount = atoi(line);
-    for (int i = 0; i < studentCount; i++) {
-        line = strtok(NULL, "\n");
-        if (!line) break;
-        Student *s = &students[i];
-        // parse: regNo|name|m1|m2|m3
-        char tmp[256];
-        strncpy(tmp, line, sizeof(tmp)-1);
-        char *tok = strtok(tmp, "|");
-        if (tok) strncpy(s->regNo,  tok, 19);
-        tok = strtok(NULL, "|");
-        if (tok) strncpy(s->name,   tok, 49);
-        tok = strtok(NULL, "|"); if (tok) s->marks[0] = atof(tok);
-        tok = strtok(NULL, "|"); if (tok) s->marks[1] = atof(tok);
-        tok = strtok(NULL, "|"); if (tok) s->marks[2] = atof(tok);
-        // recalculate
-        s->total   = s->marks[0] + s->marks[1] + s->marks[2];
-        s->average = s->total / 3.0f;
-        if      (s->average >= 80) strcpy(s->grade, "A");
-        else if (s->average >= 65) strcpy(s->grade, "B");
-        else if (s->average >= 50) strcpy(s->grade, "C");
-        else                       strcpy(s->grade, "Fail");
-    }
-    free(data);
-    printf("\n[+] %d record(s) loaded.\n", studentCount);
-#else
-    FILE *fp = fopen("students.dat", "rb");
-    if (!fp) { printf("\n[i] No saved data. Starting fresh.\n"); return; }
-    fread(&studentCount, sizeof(int),     1,            fp);
-    fread(students,      sizeof(Student), studentCount, fp);
-    fclose(fp);
-    printf("\n[+] %d record(s) loaded.\n", studentCount);
-#endif
-}
-
-// ─────────────────────────────────────────────
-//  HELPER
-// ─────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────
 void calculateResult(Student *s) {
     s->total   = s->marks[0] + s->marks[1] + s->marks[2];
     s->average = s->total / 3.0f;
@@ -119,41 +43,75 @@ int findByRegNo(const char *regNo) {
     return -1;
 }
 
-// ─────────────────────────────────────────────
-//  FEATURES
-// ─────────────────────────────────────────────
-void addStudent() {
-    if (studentCount >= MAX_STUDENTS) {
-        printf("\n[!] Student limit reached.\n"); return;
+// ── Save / Load via localStorage ─────────────────────────────
+void saveToFile() {
+#ifdef __EMSCRIPTEN__
+    char buf[1024 * 64];
+    int pos = 0;
+    pos += sprintf(buf + pos, "%d\n", studentCount);
+    for (int i = 0; i < studentCount; i++) {
+        Student *s = &students[i];
+        pos += sprintf(buf + pos, "%s|%s|%.1f|%.1f|%.1f\n",
+                       s->regNo, s->name,
+                       s->marks[0], s->marks[1], s->marks[2]);
     }
-    Student s;
-    printf("\n--- Add New Student ---\n");
-    printf("Enter Reg No : "); scanf("%19s",      s.regNo);
-    printf("Enter Name   : "); scanf(" %49[^\n]", s.name);
-    printf("Enter marks for 3 subjects:\n");
-    for (int i = 0; i < 3; i++) {
-        printf("  Subject %d : ", i + 1);
-        if (scanf("%f", &s.marks[i]) != 1) {
-            int c; while ((c = getchar()) != '\n' && c != EOF);
-            printf("[!] Invalid input.\n"); i--; continue;
-        }
-        if (s.marks[i] < 0 || s.marks[i] > 100) {
-            printf("[!] Marks must be 0-100.\n"); i--;
-        }
-    }
-    calculateResult(&s);
-    students[studentCount++] = s;
-    printf("\n[+] Added! Total: %.1f | Avg: %.1f | Grade: %s\n",
-           s.total, s.average, s.grade);
+    EM_ASM({ localStorage.setItem('spa_data', UTF8ToString($0)); }, buf);
+    printf("[+] %d record(s) saved.\n", studentCount);
+#else
+    FILE *fp = fopen("students.dat","wb");
+    if (!fp) { printf("[!] Cannot save.\n"); return; }
+    fwrite(&studentCount, sizeof(int), 1, fp);
+    fwrite(students, sizeof(Student), studentCount, fp);
+    fclose(fp);
+    printf("[+] %d record(s) saved.\n", studentCount);
+#endif
 }
 
+void loadFromFile() {
+#ifdef __EMSCRIPTEN__
+    char *data = (char *)EM_ASM_PTR({
+        var s = localStorage.getItem('spa_data');
+        if (!s) return 0;
+        var len = lengthBytesUTF8(s) + 1;
+        var heap = _malloc(len);
+        stringToUTF8(s, heap, len);
+        return heap;
+    });
+    if (!data) { printf("[i] No saved data. Starting fresh.\n"); return; }
+    char *line = strtok(data, "\n");
+    if (!line) { free(data); return; }
+    studentCount = atoi(line);
+    for (int i = 0; i < studentCount; i++) {
+        line = strtok(NULL, "\n");
+        if (!line) break;
+        char tmp[256]; strncpy(tmp, line, 255);
+        char *tok = strtok(tmp, "|");
+        if (tok) strncpy(students[i].regNo, tok, 19);
+        tok = strtok(NULL, "|");
+        if (tok) strncpy(students[i].name, tok, 49);
+        tok = strtok(NULL, "|"); if (tok) students[i].marks[0] = atof(tok);
+        tok = strtok(NULL, "|"); if (tok) students[i].marks[1] = atof(tok);
+        tok = strtok(NULL, "|"); if (tok) students[i].marks[2] = atof(tok);
+        calculateResult(&students[i]);
+    }
+    free(data);
+    printf("[+] %d record(s) loaded.\n", studentCount);
+#else
+    FILE *fp = fopen("students.dat","rb");
+    if (!fp) { printf("[i] No saved data. Starting fresh.\n"); return; }
+    fread(&studentCount, sizeof(int), 1, fp);
+    fread(students, sizeof(Student), studentCount, fp);
+    fclose(fp);
+    printf("[+] %d record(s) loaded.\n", studentCount);
+#endif
+}
+
+// ── Display functions ─────────────────────────────────────────
 void displayAll() {
-    if (studentCount == 0) { printf("\n[!] No records.\n"); return; }
+    if (studentCount == 0) { printf("[!] No records found.\n"); return; }
     printf("\n%-12s %-20s %6s %6s %6s %8s %7s %6s\n",
            "RegNo","Name","Sub1","Sub2","Sub3","Total","Avg","Grade");
-    printf("%-12s %-20s %6s %6s %6s %8s %7s %6s\n",
-           "------------","--------------------",
-           "------","------","------","--------","-------","------");
+    printf("--------------------------------------------------------------------\n");
     for (int i = 0; i < studentCount; i++) {
         Student *s = &students[i];
         printf("%-12s %-20s %6.1f %6.1f %6.1f %8.1f %7.1f %6s\n",
@@ -161,49 +119,11 @@ void displayAll() {
                s->marks[0], s->marks[1], s->marks[2],
                s->total, s->average, s->grade);
     }
-    printf("\nTotal: %d\n", studentCount);
-}
-
-void searchStudent() {
-    char regNo[20];
-    printf("\n--- Search ---\nEnter Reg No: ");
-    scanf("%19s", regNo);
-    int idx = findByRegNo(regNo);
-    if (idx == -1) { printf("\n[!] Not found: %s\n", regNo); return; }
-    Student *s = &students[idx];
-    printf("\nReg No  : %s\nName    : %s\n"
-           "Sub1-3  : %.1f | %.1f | %.1f\n"
-           "Total   : %.1f\nAverage : %.1f\nGrade   : %s\n",
-           s->regNo, s->name,
-           s->marks[0], s->marks[1], s->marks[2],
-           s->total, s->average, s->grade);
-}
-
-void updateMarks() {
-    char regNo[20];
-    printf("\n--- Update Marks ---\nEnter Reg No: ");
-    scanf("%19s", regNo);
-    int idx = findByRegNo(regNo);
-    if (idx == -1) { printf("\n[!] Not found: %s\n", regNo); return; }
-    Student *s = &students[idx];
-    printf("Updating: %s\n", s->name);
-    for (int i = 0; i < 3; i++) {
-        printf("  Subject %d (now %.1f): ", i+1, s->marks[i]);
-        if (scanf("%f", &s->marks[i]) != 1) {
-            int c; while ((c = getchar()) != '\n' && c != EOF);
-            i--; continue;
-        }
-        if (s->marks[i] < 0 || s->marks[i] > 100) {
-            printf("[!] Must be 0-100.\n"); i--;
-        }
-    }
-    calculateResult(s);
-    printf("\n[+] Updated! Total: %.1f | Avg: %.1f | Grade: %s\n",
-           s->total, s->average, s->grade);
+    printf("\nTotal: %d student(s)\n", studentCount);
 }
 
 void displayTopper() {
-    if (studentCount == 0) { printf("\n[!] No records.\n"); return; }
+    if (studentCount == 0) { printf("[!] No records.\n"); return; }
     float maxT = students[0].total;
     for (int i = 1; i < studentCount; i++)
         if (students[i].total > maxT) maxT = students[i].total;
@@ -216,24 +136,22 @@ void displayTopper() {
 }
 
 void classStats() {
-    if (studentCount == 0) { printf("\n[!] No records.\n"); return; }
+    if (studentCount == 0) { printf("[!] No records.\n"); return; }
     float sum=0, high=students[0].total, low=students[0].total;
     char hName[50], lName[50];
-    strcpy(hName, students[0].name);
-    strcpy(lName,  students[0].name);
+    strcpy(hName, students[0].name); strcpy(lName, students[0].name);
     for (int i = 0; i < studentCount; i++) {
         sum += students[i].total;
         if (students[i].total > high) { high=students[i].total; strcpy(hName,students[i].name); }
         if (students[i].total < low)  { low =students[i].total; strcpy(lName,students[i].name); }
     }
-    printf("\n--- Class Statistics ---\n"
-           "  Students : %d\n  Avg Total: %.2f\n"
-           "  Highest  : %.1f (%s)\n  Lowest   : %.1f (%s)\n",
+    printf("\n--- Class Statistics ---\n");
+    printf("  Students : %d\n  Avg Total: %.2f\n  Highest  : %.1f (%s)\n  Lowest   : %.1f (%s)\n",
            studentCount, sum/studentCount, high, hName, low, lName);
 }
 
 void gradeDistribution() {
-    if (studentCount == 0) { printf("\n[!] No records.\n"); return; }
+    if (studentCount == 0) { printf("[!] No records.\n"); return; }
     int cA=0,cB=0,cC=0,cF=0;
     for (int i=0;i<studentCount;i++) {
         if      (!strcmp(students[i].grade,"A"))    cA++;
@@ -242,17 +160,13 @@ void gradeDistribution() {
         else if (!strcmp(students[i].grade,"Fail")) cF++;
     }
     printf("\n--- Grade Distribution ---\n");
-    printf("  A    : %d (%.1f%%) [", cA, cA*100.0f/studentCount);
-    for(int i=0;i<cA;i++) { printf("#"); } printf("]\n");
-    printf("  B    : %d (%.1f%%) [", cB, cB*100.0f/studentCount);
-    for(int i=0;i<cB;i++) { printf("#"); } printf("]\n");
-    printf("  C    : %d (%.1f%%) [", cC, cC*100.0f/studentCount);
-    for(int i=0;i<cC;i++) { printf("#"); } printf("]\n");
-    printf("  Fail : %d (%.1f%%) [", cF, cF*100.0f/studentCount);
-    for(int i=0;i<cF;i++) { printf("#"); } printf("]\n");
+    printf("  A    : %d (%.1f%%)\n", cA, cA*100.0f/studentCount);
+    printf("  B    : %d (%.1f%%)\n", cB, cB*100.0f/studentCount);
+    printf("  C    : %d (%.1f%%)\n", cC, cC*100.0f/studentCount);
+    printf("  Fail : %d (%.1f%%)\n", cF, cF*100.0f/studentCount);
 }
 
-void displayMenu() {
+void showMenu() {
     printf("\n========================================\n");
     printf("   Smart Student Performance Analyzer   \n");
     printf("========================================\n");
@@ -269,28 +183,137 @@ void displayMenu() {
     printf("Enter choice: ");
 }
 
+// ── Main input handler (called by JS on each line) ────────────
+// This is exported so JS can call it directly
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
+void processInput(const char *input) {
+    switch (state) {
+        case 0: { // menu
+            int choice = atoi(input);
+            switch (choice) {
+                case 1:
+                    printf("\n--- Add New Student ---\n");
+                    printf("Enter Reg No: ");
+                    state = 1; break;
+                case 2: displayAll();   showMenu(); break;
+                case 3: saveToFile();   showMenu(); break;
+                case 4:
+                    printf("\n--- Search ---\nEnter Reg No: ");
+                    state = 6; break;
+                case 5:
+                    printf("\n--- Update Marks ---\nEnter Reg No: ");
+                    state = 7; break;
+                case 6: displayTopper();      showMenu(); break;
+                case 7: classStats();         showMenu(); break;
+                case 8: gradeDistribution();  showMenu(); break;
+                case 0:
+                    saveToFile();
+                    printf("\nGoodbye!\n"); break;
+                default:
+                    printf("[!] Invalid choice.\n");
+                    showMenu(); break;
+            }
+            break;
+        }
+        case 1: // add - regNo
+            strncpy(tempStudent.regNo, input, 19);
+            if (findByRegNo(tempStudent.regNo) != -1) {
+                printf("[!] Reg No already exists! Try again: ");
+                break;
+            }
+            printf("Enter Name: ");
+            state = 2; break;
+
+        case 2: // add - name
+            strncpy(tempStudent.name, input, 49);
+            printf("Enter Subject 1 marks (0-100): ");
+            state = 3; break;
+
+        case 3: // add - mark1
+            tempStudent.marks[0] = atof(input);
+            if (tempStudent.marks[0] < 0 || tempStudent.marks[0] > 100) {
+                printf("[!] Must be 0-100. Enter Subject 1: "); break;
+            }
+            printf("Enter Subject 2 marks (0-100): ");
+            state = 4; break;
+
+        case 4: // add - mark2
+            tempStudent.marks[1] = atof(input);
+            if (tempStudent.marks[1] < 0 || tempStudent.marks[1] > 100) {
+                printf("[!] Must be 0-100. Enter Subject 2: "); break;
+            }
+            printf("Enter Subject 3 marks (0-100): ");
+            state = 5; break;
+
+        case 5: // add - mark3
+            tempStudent.marks[2] = atof(input);
+            if (tempStudent.marks[2] < 0 || tempStudent.marks[2] > 100) {
+                printf("[!] Must be 0-100. Enter Subject 3: "); break;
+            }
+            calculateResult(&tempStudent);
+            students[studentCount++] = tempStudent;
+            printf("[+] Added! Total:%.1f Avg:%.1f Grade:%s\n",
+                   tempStudent.total, tempStudent.average, tempStudent.grade);
+            state = 0; showMenu(); break;
+
+        case 6: { // search
+            int idx = findByRegNo(input);
+            if (idx == -1) {
+                printf("[!] Not found: %s\n", input);
+            } else {
+                Student *s = &students[idx];
+                printf("\nReg No  : %s\nName    : %s\n"
+                       "Sub1    : %.1f\nSub2    : %.1f\nSub3    : %.1f\n"
+                       "Total   : %.1f\nAverage : %.1f\nGrade   : %s\n",
+                       s->regNo, s->name,
+                       s->marks[0], s->marks[1], s->marks[2],
+                       s->total, s->average, s->grade);
+            }
+            state = 0; showMenu(); break;
+        }
+        case 7: { // update - regNo
+            int idx = findByRegNo(input);
+            if (idx == -1) {
+                printf("[!] Not found: %s\nEnter Reg No: ", input); break;
+            }
+            updateIdx = idx;
+            printf("Updating: %s\nEnter Subject 1 (current:%.1f): ",
+                   students[idx].name, students[idx].marks[0]);
+            state = 8; break;
+        }
+        case 8: // update - mark1
+            students[updateIdx].marks[0] = atof(input);
+            if (students[updateIdx].marks[0] < 0 || students[updateIdx].marks[0] > 100) {
+                printf("[!] Must be 0-100. Enter Subject 1: "); break;
+            }
+            printf("Enter Subject 2 (current:%.1f): ", students[updateIdx].marks[1]);
+            state = 9; break;
+
+        case 9: // update - mark2
+            students[updateIdx].marks[1] = atof(input);
+            if (students[updateIdx].marks[1] < 0 || students[updateIdx].marks[1] > 100) {
+                printf("[!] Must be 0-100. Enter Subject 2: "); break;
+            }
+            printf("Enter Subject 3 (current:%.1f): ", students[updateIdx].marks[2]);
+            state = 10; break;
+
+        case 10: // update - mark3
+            students[updateIdx].marks[2] = atof(input);
+            if (students[updateIdx].marks[2] < 0 || students[updateIdx].marks[2] > 100) {
+                printf("[!] Must be 0-100. Enter Subject 3: "); break;
+            }
+            calculateResult(&students[updateIdx]);
+            printf("[+] Updated! Total:%.1f Avg:%.1f Grade:%s\n",
+                   students[updateIdx].total, students[updateIdx].average,
+                   students[updateIdx].grade);
+            state = 0; showMenu(); break;
+    }
+}
+
 int main() {
     loadFromFile();
-    int choice;
-    do {
-        displayMenu();
-        if (scanf("%d", &choice) != 1) {
-            int c; while ((c = getchar()) != '\n' && c != EOF);
-            printf("[!] Enter a number.\n");
-            continue;
-        }
-        switch (choice) {
-            case 1: addStudent();        break;
-            case 2: displayAll();        break;
-            case 3: saveToFile();        break;
-            case 4: searchStudent();     break;
-            case 5: updateMarks();       break;
-            case 6: displayTopper();     break;
-            case 7: classStats();        break;
-            case 8: gradeDistribution(); break;
-            case 0: saveToFile(); printf("\nGoodbye!\n"); break;
-            default: printf("\n[!] Invalid choice.\n");
-        }
-    } while (choice != 0);
+    showMenu();
     return 0;
 }

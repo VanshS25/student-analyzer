@@ -6,11 +6,7 @@
 <title>Student Performance Analyzer</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <style>
-  :root {
-    --bg:#0a0a12; --surface:#13131f; --card:#1a1a2e; --border:#2a2a45;
-    --cyan:#00f5d4; --pink:#ff2d78; --yellow:#ffe135; --purple:#a855f7;
-    --text:#f0f0ff; --muted:#7070a0; --green:#00e676;
-  }
+  :root { --bg:#0a0a12; --surface:#13131f; --card:#1a1a2e; --border:#2a2a45; --cyan:#00f5d4; --pink:#ff2d78; --purple:#a855f7; --text:#f0f0ff; --muted:#7070a0; --green:#00e676; }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',monospace; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:24px 16px; }
   body::before { content:''; position:fixed; inset:0; z-index:0; background-image:linear-gradient(rgba(0,245,212,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,212,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; }
@@ -21,26 +17,25 @@
   .blob3 { width:300px; height:300px; background:var(--purple); top:40%; left:40%; animation-delay:-8s; }
   @keyframes drift { from{transform:translate(0,0) scale(1)} to{transform:translate(40px,30px) scale(1.1)} }
   .wrapper { position:relative; z-index:1; width:100%; max-width:860px; }
-  header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding:20px 24px; background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--cyan); border-radius:12px; animation:fadeIn 0.5s ease; }
-  .header-left h1 { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; color:var(--cyan); letter-spacing:-0.02em; }
+  header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; padding:20px 24px; background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--cyan); border-radius:12px; }
+  .header-left h1 { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; color:var(--cyan); }
   .header-left p { font-size:0.72rem; color:var(--muted); margin-top:2px; }
   .status-dot { width:10px; height:10px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:pulse 2s ease infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-  .terminal { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:16px; animation:fadeIn 0.5s ease 0.1s both; }
+  .terminal { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:16px; }
   .terminal-bar { background:#1a1d28; padding:10px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border); }
   .t-dot { width:11px; height:11px; border-radius:50%; }
   .t-dot.r{background:#ff5f57} .t-dot.y{background:#febc2e} .t-dot.g{background:#28c840}
   .terminal-title { margin-left:8px; font-size:0.75rem; color:var(--muted); font-family:'Syne',sans-serif; }
-  #output { padding:20px; min-height:360px; max-height:480px; overflow-y:auto; font-size:0.85rem; line-height:1.7; white-space:pre-wrap; word-break:break-word; color:#c8d0e8; scroll-behavior:smooth; }
-  #output::-webkit-scrollbar{width:4px} #output::-webkit-scrollbar-track{background:transparent} #output::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-  .input-row { display:flex; align-items:center; gap:0; border-top:1px solid var(--border); padding:14px 20px; background:#10131a; }
-  .prompt { color:var(--cyan); margin-right:10px; font-size:0.9rem; user-select:none; }
+  #output { padding:20px; min-height:360px; max-height:480px; overflow-y:auto; font-size:0.85rem; line-height:1.7; white-space:pre-wrap; word-break:break-word; color:#c8d0e8; }
+  #output::-webkit-scrollbar{width:4px} #output::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  .input-row { display:flex; align-items:center; border-top:1px solid var(--border); padding:14px 20px; background:#10131a; gap:10px; }
+  .prompt { color:var(--cyan); font-size:0.9rem; user-select:none; }
   #userInput { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:0.9rem; caret-color:var(--cyan); }
   #userInput::placeholder { color:var(--muted); }
-  #sendBtn { background:var(--cyan); color:#000; border:none; border-radius:7px; padding:8px 18px; font-family:'Syne',sans-serif; font-weight:700; font-size:0.8rem; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+  #sendBtn { background:var(--cyan); color:#000; border:none; border-radius:7px; padding:8px 18px; font-family:'Syne',sans-serif; font-weight:700; font-size:0.8rem; cursor:pointer; transition:all 0.15s; }
   #sendBtn:hover { background:#00ddb0; transform:translateY(-1px); }
-  .quick-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; animation:fadeIn 0.5s ease 0.2s both; }
+  .quick-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; }
   .quick-title { font-family:'Syne',sans-serif; font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; }
   .quick-grid { display:flex; flex-wrap:wrap; gap:8px; }
   .qbtn { padding:7px 14px; border-radius:7px; border:1px solid var(--border); background:#1a1d28; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:0.78rem; cursor:pointer; transition:all 0.15s; }
@@ -79,21 +74,19 @@
 
   <div class="terminal">
     <div class="terminal-bar">
-      <div class="t-dot r"></div>
-      <div class="t-dot y"></div>
-      <div class="t-dot g"></div>
+      <div class="t-dot r"></div><div class="t-dot y"></div><div class="t-dot g"></div>
       <span class="terminal-title">student_analyzer.wasm — live console</span>
     </div>
     <div id="output"></div>
     <div class="input-row">
       <span class="prompt">›</span>
-      <input id="userInput" type="text" placeholder="Type here and press Enter or click Send..." autocomplete="off" spellcheck="false"/>
+      <input id="userInput" type="text" placeholder="Type here and press Enter..." autocomplete="off" spellcheck="false"/>
       <button id="sendBtn" onclick="sendInput()">Send ↵</button>
     </div>
   </div>
 
   <div class="quick-panel">
-    <div class="quick-title">⚡ Quick buttons — click to send menu choice</div>
+    <div class="quick-title">⚡ Quick buttons</div>
     <div class="quick-grid">
       <button class="qbtn" onclick="quickSend('1')">1 · Add Student</button>
       <button class="qbtn" onclick="quickSend('2')">2 · Display All</button>
@@ -109,17 +102,13 @@
 </div>
 
 <script>
-  // ── Input queue ───────────────────────────────────────────
-  var inputLines = [];       // full lines waiting
-  var resolveInput = null;   // promise resolver waiting for input
-
   function appendOutput(text) {
     var el = document.getElementById('output');
     var coloured = text
       .replace(/(\[!\][^\n]*)/g, '<span style="color:#ff2d78">$1</span>')
       .replace(/(\[+\][^\n]*)/g, '<span style="color:#00e676">$1</span>')
       .replace(/(\[i\][^\n]*)/g,  '<span style="color:#7070a0">$1</span>')
-      .replace(/(={3,})/g,        '<span style="color:#00f5d4">$1</span>');
+      .replace(/(={3,}[^\n]*)/g,  '<span style="color:#00f5d4">$1</span>');
     var span = document.createElement('span');
     span.innerHTML = coloured;
     el.appendChild(span);
@@ -131,13 +120,8 @@
     document.getElementById('userInput').value = '';
     if (val === '') return;
     appendOutput('<span style="color:#00f5d4">› ' + val + '</span>\n');
-    // if WASM is waiting for input, resolve immediately
-    if (resolveInput) {
-      resolveInput(val + '\n');
-      resolveInput = null;
-    } else {
-      inputLines.push(val + '\n');
-    }
+    // Call the C function directly — no ASYNCIFY needed!
+    Module.ccall('processInput', null, ['string'], [val]);
     document.getElementById('userInput').focus();
   }
 
@@ -150,35 +134,11 @@
     if (e.key === 'Enter') sendInput();
   });
 
-  // ── Emscripten Module ─────────────────────────────────────
-  // Uses Asyncify: WASM suspends when no input, resumes when user types
-  var pendingChars = '';
-
   var Module = {
-    print: function(text) {
-      appendOutput(text + '\n');
-    },
+    print: function(text) { appendOutput(text + '\n'); },
     printErr: function(text) {
-      if (text.indexOf('Downloading') === -1 && text.indexOf('wasm') === -1)
+      if (text.indexOf('wasm') === -1 && text.indexOf('fetch') === -1)
         appendOutput('<span style="color:#ff2d78">' + text + '</span>\n');
-    },
-    // Asyncify-compatible async stdin
-    stdin: function() {
-      // If we have buffered chars, return next one
-      if (pendingChars.length > 0) {
-        var ch = pendingChars.charCodeAt(0);
-        pendingChars = pendingChars.slice(1);
-        return ch;
-      }
-      // If lines are queued, use next line
-      if (inputLines.length > 0) {
-        pendingChars = inputLines.shift();
-        var ch = pendingChars.charCodeAt(0);
-        pendingChars = pendingChars.slice(1);
-        return ch;
-      }
-      // No input — return -1 (EOF signal to Emscripten)
-      return -1;
     },
     onRuntimeInitialized: function() {
       document.getElementById('loadingOverlay').style.display = 'none';
@@ -187,8 +147,6 @@
   };
 </script>
 
-<!-- Emscripten generated JS — must be in same folder -->
 <script src="index.js"></script>
-
 </body>
 </html>
