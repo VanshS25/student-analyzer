@@ -1775,8 +1775,8 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('loadSplitModule');
 }
 var ASM_CONSTS = {
-  70404: ($0) => { localStorage.setItem('spa_data', UTF8ToString($0)); },  
- 70460: () => { var s = localStorage.getItem('spa_data'); if (!s) return 0; var len = lengthBytesUTF8(s) + 1; var heap = _malloc(len); stringToUTF8(s, heap, len); return heap; }
+  70372: ($0) => { localStorage.setItem('spa_data', UTF8ToString($0)); },  
+ 70428: () => { var s = localStorage.getItem('spa_data'); if (!s) return 0; var len = lengthBytesUTF8(s) + 1; var heap = _malloc(len); stringToUTF8(s, heap, len); return heap; }
 };
 
 // Imports from the Wasm binary.

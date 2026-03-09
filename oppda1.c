@@ -19,15 +19,10 @@ typedef struct {
 
 Student students[MAX_STUDENTS];
 int studentCount = 0;
-
-// ── State machine for menu interaction ───────────────────────
-// state: 0=menu, 1=add(regNo), 2=add(name), 3=add(m1), 4=add(m2), 5=add(m3)
-//        6=search, 7=update(regNo), 8=update(m1), 9=update(m2), 10=update(m3)
 int state = 0;
-Student tempStudent;   // holds student being entered
-int updateIdx = -1;    // index of student being updated
+Student tempStudent;
+int updateIdx = -1;
 
-// ── Helpers ───────────────────────────────────────────────────
 void calculateResult(Student *s) {
     s->total   = s->marks[0] + s->marks[1] + s->marks[2];
     s->average = s->total / 3.0f;
@@ -43,7 +38,6 @@ int findByRegNo(const char *regNo) {
     return -1;
 }
 
-// ── Save / Load via localStorage ─────────────────────────────
 void saveToFile() {
 #ifdef __EMSCRIPTEN__
     char buf[1024 * 64];
@@ -106,7 +100,6 @@ void loadFromFile() {
 #endif
 }
 
-// ── Display functions ─────────────────────────────────────────
 void displayAll() {
     if (studentCount == 0) { printf("[!] No records found.\n"); return; }
     printf("\n%-12s %-20s %6s %6s %6s %8s %7s %6s\n",
@@ -180,34 +173,34 @@ void showMenu() {
     printf(" 8. Grade Distribution\n");
     printf(" 0. Exit\n");
     printf("========================================\n");
-    printf("Enter choice: ");
+    printf("Enter choice:\n");
 }
 
-// ── Main input handler (called by JS on each line) ────────────
-// This is exported so JS can call it directly
 #ifdef __EMSCRIPTEN__
 EMSCRIPTEN_KEEPALIVE
 #endif
 void processInput(const char *input) {
     switch (state) {
-        case 0: { // menu
+        case 0: {
             int choice = atoi(input);
             switch (choice) {
                 case 1:
                     printf("\n--- Add New Student ---\n");
-                    printf("Enter Reg No: ");
+                    printf("Enter Reg No:\n");
                     state = 1; break;
-                case 2: displayAll();   showMenu(); break;
-                case 3: saveToFile();   showMenu(); break;
+                case 2: displayAll();          showMenu(); break;
+                case 3: saveToFile();          showMenu(); break;
                 case 4:
-                    printf("\n--- Search ---\nEnter Reg No: ");
+                    printf("\n--- Search ---\n");
+                    printf("Enter Reg No:\n");
                     state = 6; break;
                 case 5:
-                    printf("\n--- Update Marks ---\nEnter Reg No: ");
+                    printf("\n--- Update Marks ---\n");
+                    printf("Enter Reg No:\n");
                     state = 7; break;
-                case 6: displayTopper();      showMenu(); break;
-                case 7: classStats();         showMenu(); break;
-                case 8: gradeDistribution();  showMenu(); break;
+                case 6: displayTopper();       showMenu(); break;
+                case 7: classStats();          showMenu(); break;
+                case 8: gradeDistribution();   showMenu(); break;
                 case 0:
                     saveToFile();
                     printf("\nGoodbye!\n"); break;
@@ -217,40 +210,40 @@ void processInput(const char *input) {
             }
             break;
         }
-        case 1: // add - regNo
+        case 1:
             strncpy(tempStudent.regNo, input, 19);
             if (findByRegNo(tempStudent.regNo) != -1) {
-                printf("[!] Reg No already exists! Try again: ");
+                printf("[!] Reg No already exists! Try again:\n");
                 break;
             }
-            printf("Enter Name: ");
+            printf("Enter Name:\n");
             state = 2; break;
 
-        case 2: // add - name
+        case 2:
             strncpy(tempStudent.name, input, 49);
-            printf("Enter Subject 1 marks (0-100): ");
+            printf("Enter Subject 1 marks (0-100):\n");
             state = 3; break;
 
-        case 3: // add - mark1
+        case 3:
             tempStudent.marks[0] = atof(input);
             if (tempStudent.marks[0] < 0 || tempStudent.marks[0] > 100) {
-                printf("[!] Must be 0-100. Enter Subject 1: "); break;
+                printf("[!] Must be 0-100. Enter Subject 1:\n"); break;
             }
-            printf("Enter Subject 2 marks (0-100): ");
+            printf("Enter Subject 2 marks (0-100):\n");
             state = 4; break;
 
-        case 4: // add - mark2
+        case 4:
             tempStudent.marks[1] = atof(input);
             if (tempStudent.marks[1] < 0 || tempStudent.marks[1] > 100) {
-                printf("[!] Must be 0-100. Enter Subject 2: "); break;
+                printf("[!] Must be 0-100. Enter Subject 2:\n"); break;
             }
-            printf("Enter Subject 3 marks (0-100): ");
+            printf("Enter Subject 3 marks (0-100):\n");
             state = 5; break;
 
-        case 5: // add - mark3
+        case 5:
             tempStudent.marks[2] = atof(input);
             if (tempStudent.marks[2] < 0 || tempStudent.marks[2] > 100) {
-                printf("[!] Must be 0-100. Enter Subject 3: "); break;
+                printf("[!] Must be 0-100. Enter Subject 3:\n"); break;
             }
             calculateResult(&tempStudent);
             students[studentCount++] = tempStudent;
@@ -258,51 +251,49 @@ void processInput(const char *input) {
                    tempStudent.total, tempStudent.average, tempStudent.grade);
             state = 0; showMenu(); break;
 
-        case 6: { // search
+        case 6: {
             int idx = findByRegNo(input);
             if (idx == -1) {
                 printf("[!] Not found: %s\n", input);
             } else {
                 Student *s = &students[idx];
-                printf("\nReg No  : %s\nName    : %s\n"
-                       "Sub1    : %.1f\nSub2    : %.1f\nSub3    : %.1f\n"
-                       "Total   : %.1f\nAverage : %.1f\nGrade   : %s\n",
+                printf("\nReg No  : %s\nName    : %s\nSub1    : %.1f\nSub2    : %.1f\nSub3    : %.1f\nTotal   : %.1f\nAverage : %.1f\nGrade   : %s\n",
                        s->regNo, s->name,
                        s->marks[0], s->marks[1], s->marks[2],
                        s->total, s->average, s->grade);
             }
             state = 0; showMenu(); break;
         }
-        case 7: { // update - regNo
+        case 7: {
             int idx = findByRegNo(input);
             if (idx == -1) {
-                printf("[!] Not found: %s\nEnter Reg No: ", input); break;
+                printf("[!] Not found: %s\nEnter Reg No:\n", input); break;
             }
             updateIdx = idx;
-            printf("Updating: %s\nEnter Subject 1 (current:%.1f): ",
+            printf("Updating: %s\nEnter Subject 1 (current: %.1f):\n",
                    students[idx].name, students[idx].marks[0]);
             state = 8; break;
         }
-        case 8: // update - mark1
+        case 8:
             students[updateIdx].marks[0] = atof(input);
             if (students[updateIdx].marks[0] < 0 || students[updateIdx].marks[0] > 100) {
-                printf("[!] Must be 0-100. Enter Subject 1: "); break;
+                printf("[!] Must be 0-100. Enter Subject 1:\n"); break;
             }
-            printf("Enter Subject 2 (current:%.1f): ", students[updateIdx].marks[1]);
+            printf("Enter Subject 2 (current: %.1f):\n", students[updateIdx].marks[1]);
             state = 9; break;
 
-        case 9: // update - mark2
+        case 9:
             students[updateIdx].marks[1] = atof(input);
             if (students[updateIdx].marks[1] < 0 || students[updateIdx].marks[1] > 100) {
-                printf("[!] Must be 0-100. Enter Subject 2: "); break;
+                printf("[!] Must be 0-100. Enter Subject 2:\n"); break;
             }
-            printf("Enter Subject 3 (current:%.1f): ", students[updateIdx].marks[2]);
+            printf("Enter Subject 3 (current: %.1f):\n", students[updateIdx].marks[2]);
             state = 10; break;
 
-        case 10: // update - mark3
+        case 10:
             students[updateIdx].marks[2] = atof(input);
             if (students[updateIdx].marks[2] < 0 || students[updateIdx].marks[2] > 100) {
-                printf("[!] Must be 0-100. Enter Subject 3: "); break;
+                printf("[!] Must be 0-100. Enter Subject 3:\n"); break;
             }
             calculateResult(&students[updateIdx]);
             printf("[+] Updated! Total:%.1f Avg:%.1f Grade:%s\n",
