@@ -71,6 +71,21 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
+// include: pre.js
+Module = {
+  preRun: [],
+  postRun: [],
+  print: function(text) {
+    var output = document.getElementById('output');
+    if (output) {
+      output.value += text + '\n';
+      output.scrollTop = output.scrollHeight;
+    }
+  },
+  printErr: function(text) {
+    console.error(text);
+  }
+};// end include: pre.js
 
 
 var arguments_ = [];
