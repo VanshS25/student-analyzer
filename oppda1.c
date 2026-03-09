@@ -40,16 +40,24 @@ int findByRegNo(const char *regNo) {
 
 void saveToFile() {
 #ifdef __EMSCRIPTEN__
-    char buf[1024 * 64];
-    int pos = 0;
-    pos += sprintf(buf + pos, "%d\n", studentCount);
+    // Build JSON string in JS directly - safer than passing large C buffer
+    EM_ASM({ localStorage.removeItem('spa_data'); });
+    EM_ASM_INT({ localStorage.setItem('spa_count', $0); }, studentCount);
     for (int i = 0; i < studentCount; i++) {
         Student *s = &students[i];
-        pos += sprintf(buf + pos, "%s|%s|%.1f|%.1f|%.1f\n",
-                       s->regNo, s->name,
-                       s->marks[0], s->marks[1], s->marks[2]);
+        EM_ASM({
+            var i     = $0;
+            var regNo = UTF8ToString($1);
+            var name  = UTF8ToString($2);
+            var m1    = $3;
+            var m2    = $4;
+            var m3    = $5;
+            localStorage.setItem('spa_s' + i,
+                regNo + '|' + name + '|' + m1 + '|' + m2 + '|' + m3);
+        }, i,
+           s->regNo, s->name,
+           s->marks[0], s->marks[1], s->marks[2]);
     }
-    EM_ASM({ localStorage.setItem('spa_data', UTF8ToString($0)); }, buf);
     printf("[+] %d record(s) saved.\n", studentCount);
 #else
     FILE *fp = fopen("students.dat","wb");
@@ -63,23 +71,22 @@ void saveToFile() {
 
 void loadFromFile() {
 #ifdef __EMSCRIPTEN__
-    char *data = (char *)EM_ASM_PTR({
-        var s = localStorage.getItem('spa_data');
-        if (!s) return 0;
-        var len = lengthBytesUTF8(s) + 1;
-        var heap = _malloc(len);
-        stringToUTF8(s, heap, len);
-        return heap;
+    studentCount = EM_ASM_INT({
+        var c = localStorage.getItem('spa_count');
+        return c ? parseInt(c) : 0;
     });
-    if (!data) { printf("[i] No saved data. Starting fresh.\n"); return; }
-    char *line = strtok(data, "\n");
-    if (!line) { free(data); return; }
-    studentCount = atoi(line);
+    if (studentCount == 0) {
+        printf("[i] No saved data. Starting fresh.\n");
+        return;
+    }
     for (int i = 0; i < studentCount; i++) {
-        line = strtok(NULL, "\n");
-        if (!line) break;
-        char tmp[256]; strncpy(tmp, line, 255);
-        char *tok = strtok(tmp, "|");
+        char buf[256];
+        buf[0] = '\0';
+        EM_ASM({
+            var val = localStorage.getItem('spa_s' + $0);
+            if (val) stringToUTF8(val, $1, 255);
+        }, i, buf);
+        char *tok = strtok(buf, "|");
         if (tok) strncpy(students[i].regNo, tok, 19);
         tok = strtok(NULL, "|");
         if (tok) strncpy(students[i].name, tok, 49);
@@ -88,7 +95,6 @@ void loadFromFile() {
         tok = strtok(NULL, "|"); if (tok) students[i].marks[2] = atof(tok);
         calculateResult(&students[i]);
     }
-    free(data);
     printf("[+] %d record(s) loaded.\n", studentCount);
 #else
     FILE *fp = fopen("students.dat","rb");
