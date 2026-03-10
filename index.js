@@ -4342,11 +4342,11 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('loadSplitModule');
 }
 var ASM_CONSTS = {
-  70192: () => { localStorage.removeItem('spa_data'); },  
- 70233: ($0) => { localStorage.setItem('spa_count', $0); },  
- 70276: ($0, $1, $2, $3, $4, $5) => { var i = $0; var regNo = UTF8ToString($1); var name = UTF8ToString($2); var m1 = $3; var m2 = $4; var m3 = $5; localStorage.setItem('spa_s' + i, regNo + '|' + name + '|' + m1 + '|' + m2 + '|' + m3); },  
- 70478: () => { var c = localStorage.getItem('spa_count'); return c ? parseInt(c) : 0; },  
- 70553: ($0, $1) => { var val = localStorage.getItem('spa_s' + $0); if (val) stringToUTF8(val, $1, 255); }
+  70288: () => { localStorage.removeItem('spa_data'); },  
+ 70329: ($0) => { localStorage.setItem('spa_count', $0); },  
+ 70372: ($0, $1, $2, $3, $4, $5) => { var i = $0; var regNo = UTF8ToString($1); var name = UTF8ToString($2); var m1 = $3; var m2 = $4; var m3 = $5; localStorage.setItem('spa_s' + i, regNo + '|' + name + '|' + m1 + '|' + m2 + '|' + m3); },  
+ 70574: () => { var c = localStorage.getItem('spa_count'); return c ? parseInt(c) : 0; },  
+ 70649: ($0, $1) => { var val = localStorage.getItem('spa_s' + $0); if (val) stringToUTF8(val, $1, 255); }
 };
 
 // Imports from the Wasm binary.

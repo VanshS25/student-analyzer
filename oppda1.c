@@ -177,6 +177,7 @@ void showMenu() {
     printf(" 6. Display Topper(s)\n");
     printf(" 7. Class Statistics\n");
     printf(" 8. Grade Distribution\n");
+    printf(" 9. Delete Student\n");
     printf(" 0. Exit\n");
     printf("========================================\n");
     printf("Enter choice:\n");
@@ -207,6 +208,10 @@ void processInput(const char *input) {
                 case 6: displayTopper();       showMenu(); break;
                 case 7: classStats();          showMenu(); break;
                 case 8: gradeDistribution();   showMenu(); break;
+                case 9:
+                    printf("\n--- Delete Student ---\n");
+                    printf("Enter Reg No to delete:\n");
+                    state = 11; break;
                 case 0:
                     saveToFile();
                     printf("\nGoodbye!\n"); break;
@@ -306,6 +311,22 @@ void processInput(const char *input) {
                    students[updateIdx].total, students[updateIdx].average,
                    students[updateIdx].grade);
             state = 0; showMenu(); break;
+
+        case 11: {
+            int idx = findByRegNo(input);
+            if (idx == -1) {
+                printf("[!] Not found: %s\n", input);
+                state = 0; showMenu(); break;
+            }
+            char deletedName[50];
+            strncpy(deletedName, students[idx].name, 49);
+            // Shift all students after idx left by one
+            for (int i = idx; i < studentCount - 1; i++)
+                students[i] = students[i + 1];
+            studentCount--;
+            printf("[+] Deleted: %s\n", deletedName);
+            state = 0; showMenu(); break;
+        }
     }
 }
 
